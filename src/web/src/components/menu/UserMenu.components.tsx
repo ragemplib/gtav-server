@@ -11,15 +11,15 @@ type Props = {
 
 const Settings = () => {
     const [data, setData] = useState<Props>({
-        login: '',
-        avatarUrl: '',
+        login: 'Brown',
+        avatarUrl: 'https://a.rsg.sc/n/balbaskin',
     });
 
     const [active, setActive] = useState(0);
 
-    rpc.register('CefSettings', (clientData: Props) => {
-        setData({ ...data, login: clientData.login, avatarUrl: clientData.avatarUrl });
-    });
+    // rpc.register('CefSettings', (clientData: Props) => {
+    //     setData({ ...data, login: clientData.login, avatarUrl: clientData.avatarUrl });
+    // });
 
     return (
         <div className="all_settings">

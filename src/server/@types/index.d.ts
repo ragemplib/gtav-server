@@ -1,32 +1,34 @@
 declare global {
-	interface PlayerMp {
-		dbId: string;
-		uid: number;
-		firstName: string;
-		lastName: string;
-		loggedIn: boolean;
-		admin: boolean;
-		adminLvl: string;
-		
-		money: {
-			cash: number,
-			bank: number,
-		};
+  interface PlayerMp {
+    dbId: string;
+    uid: number;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    loggedIn: boolean;
+    admin: boolean;
+    adminLvl: string;
 
-		isOnWork: boolean;
-		isJob: string;
-		jobCollctor: {
-			bankIndex: number;
-			partyFriendsValue: number;
-			partyFriendsList: string[];
-			vehicle: VehicleMp;
-			pointIndex: number;
-			routeIndex: number;
-			bagsValue: number;
-		};
-	}
+    money: {
+      cash: number;
+      bank: number;
+    };
+
+    isOnWork: boolean;
+    isJob: string;
+    jobVehicle: VehicleMp | number | string;
+  }
+
+  interface CollectorJob {
+    bankLevel: 1 | 2 | 3 | 0; //* sandy = 1, paleto = 2, santos = 3, 0 = finished working;
+    partyFriendValue: number;
+    partyFriendList: [];
+    pointIndex: number;
+    routeIndex: number;
+    routeLocation: 'Santos' | 'Sandy' | 'Paleto' | 'None';
+  }
 }
 
-declare module 'express';
+declare module "express";
 
 export {};

@@ -1,14 +1,58 @@
-import notifyBlack from "./scripts/startNotify";
-import script from "./scripts/work";
+import './scripts/peds';
+import notifyBlack from "./scripts/startNotify"
+import script from "./scripts/work"
 
 mp.events.add({
-    startWorkCollectors: () => {
-        notifyBlack('чтобы открыть меню.');
-        mp.keys.bind(key.E, true, script.startWork);
-    },
+  startWorkCollectors: (location: string) => {
+    switch (location) {
+      case "santos":
+        notifyBlack("чтобы поговорить с работодателем.");
+        mp.keys.bind(key.E, true, script.startWorkSantos);
+        break;
 
-    stopWorkCollectors: () => {
-        notifyBlack('чтобы открыть меню.');
-        mp.keys.bind(key.E, true, script.stopWork);
+      case "sandy":
+        notifyBlack("чтобы поговорить с работодателем.");
+        mp.keys.bind(key.E, true, script.startWorkSandy);
+        break;
+
+      case "paleto":
+        notifyBlack("чтобы поговорить с работодателем.");
+        mp.keys.bind(key.E, true, script.startWorkPaleto);
+        break;
+
+      default:
+        break;
     }
+  },
+
+  stopWorkCollectors: () => {
+    notifyBlack("чтобы открыть меню.");
+    mp.keys.bind(key.E, true, script.stopWork);
+  },
+
+  // TODO: Доделать
+  enterWorkCollectors: (location: string) => {
+    switch (location) {
+      case 'santos':
+        notifyBlack('хотите продолжить работу?');
+        mp.keys.bind(key.E, true, script.enterWorkSantos);
+        break;
+
+      case 'sandy':
+        notifyBlack('хотите продолжить работу?');
+
+        break;
+
+      case 'paleto':
+        notifyBlack('хотите продолжить работу?');
+
+        break;
+
+      default: break;
+    }
+  },
+
+  cantWorkThisLevelCollectors: () => {
+    // alert('Вы не можете продолжить работу на данном уровне!')
+  }
 });

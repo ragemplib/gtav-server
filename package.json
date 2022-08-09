@@ -1,12 +1,11 @@
 {
   "name": "gtav-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "scripts": {
     "prodBuild": "rollup -c ./config/rollup.config.js --environment NODE_ENV:production",
     "devBuild": "rollup -c ./config/rollup.config.js",
     "watch": "rollup -w -c ./config/rollup.config.js",
-    "dev": "ragemp-server.exe",
-    "devBack": "ts-node src/backend/bot.ts"
+    "dev": "ragemp-server.exe"
   },
   "repository": {
     "type": "git",

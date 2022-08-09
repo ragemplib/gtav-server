@@ -135,25 +135,42 @@ mp.events.add("receptionUserData", async (login, userAvatarUrl) => {
     }
 });
 
-let hud = null;
-mp.events.add("playerReady", async () => {
-    mp.events.callRemote("hudGetDataToRPC"); // Получаю данные из БД (player.uid, player.admin)
-});
-// Сделать обновление данных (online) каждые 5-10 секунд. (ПОТОМ)
-mp.events.add("hudDataWithRPC", async (uid, admin) => {
-    if (!hud) {
-        const data = {
-            uid: uid,
-            isAdmin: admin,
-            online: mp.players.length,
-        };
-        hud = mp.browsers.new("http://localhost:3000/hud");
-        await rpc.callBrowser(hud, "hudSetData", { ...data });
+class Browser {
+    hud = null;
+    constructor() {
+        this.anyEvents();
     }
-    else {
-        hud.destroy();
-        hud = null;
+    anyEvents() {
+        mp.events.add({
+            // Сделать обновление данных (online) каждые 5-10 секунд. (ПОТОМ)
+            hudDataWithRPC: async (uid, admin) => {
+                if (!this.hud) {
+                    const data = {
+                        uid: uid,
+                        isAdmin: admin,
+                        online: mp.players.length,
+                    };
+                    this.hud = mp.browsers.new("http://localhost:3000/hud");
+                    await rpc.callBrowser(this.hud, "hudSetData", { ...data });
+                }
+                else {
+                    this.hud.destroy();
+                    this.hud = null;
+                }
+            },
+        });
     }
+    async createNewBrowser() {
+    }
+}
+new Browser();
+
+mp.events.add({
+    playerReady: () => {
+        mp.events.callRemote("hudGetDataToRPC"); // Получаю данные из БД (player.uid, player.admin)
+    },
+    render: () => {
+    },
 });
 
 let createAccountCef = null;
@@ -203,6 +220,10 @@ mp.events.add({
     }
 });
 
+mp.peds.new(0xCDEF5408, new mp.Vector3(-41.67, -662.88, 33.48), -176, 0);
+mp.peds.new(0xE7565327, new mp.Vector3(1181.01, 2704.97, 38.09), 87, 0);
+mp.peds.new(0x0703F106, new mp.Vector3(-117.59, 6469.70, 31.63), -132, 0);
+
 function notifyBlack(message) {
     if (mp.players.local.vehicle)
         return;
@@ -215,30 +236,114 @@ function notifyBlack(message) {
     mp.game.ui.displayHelpTextFromStringLabel(0, false, true, 3000);
 }
 
-function startWork() {
-    mp.events.callRemote("playerStartWorkOnCollectors");
-    setTimeout(() => {
-        mp.keys.unbind(69 /* key.E */, true, startWork);
-    }, 100);
-}
-function stopWork() {
-    mp.events.callRemote("playerStopWorkOnCollector");
+const stopWork = () => {
+    mp.events.callRemote("playerStopWorkOnCollectors");
     setTimeout(() => {
         mp.keys.unbind(69 /* key.E */, true, stopWork);
     }, 100);
-}
+};
+const startWorkSantos = () => {
+    mp.events.callRemote("playerStartWorkOnCollectors", "santos");
+    setTimeout(() => {
+        mp.keys.unbind(69 /* key.E */, true, startWorkSantos);
+    }, 150);
+};
+const startWorkSandy = () => {
+    mp.events.callRemote("playerStartWorkOnCollectors", "sandy");
+    setTimeout(() => {
+        mp.keys.unbind(69 /* key.E */, true, startWorkSandy);
+    }, 150);
+};
+const startWorkPaleto = () => {
+    mp.events.callRemote("playerStartWorkOnCollectors", "paleto");
+    setTimeout(() => {
+        mp.keys.unbind(69 /* key.E */, true, startWorkPaleto);
+    }, 150);
+};
+const enterWorkSantos = () => {
+    mp.events.callRemote('playerEnterWorkOnCollectors', 'santos');
+    setTimeout(() => {
+        mp.keys.unbind(69 /* key.E */, true, enterWorkSantos);
+    }, 150);
+};
 var script = {
-    startWork,
     stopWork,
+    startWorkSantos,
+    startWorkSandy,
+    startWorkPaleto,
+    enterWorkSantos,
 };
 
 mp.events.add({
-    startWorkCollectors: () => {
-        notifyBlack('чтобы открыть меню.');
-        mp.keys.bind(69 /* key.E */, true, script.startWork);
+    startWorkCollectors: (location) => {
+        switch (location) {
+            case "santos":
+                notifyBlack("чтобы поговорить с работодателем.");
+                mp.keys.bind(69 /* key.E */, true, script.startWorkSantos);
+                break;
+            case "sandy":
+                notifyBlack("чтобы поговорить с работодателем.");
+                mp.keys.bind(69 /* key.E */, true, script.startWorkSandy);
+                break;
+            case "paleto":
+                notifyBlack("чтобы поговорить с работодателем.");
+                mp.keys.bind(69 /* key.E */, true, script.startWorkPaleto);
+                break;
+        }
     },
     stopWorkCollectors: () => {
-        notifyBlack('чтобы открыть меню.');
+        notifyBlack("чтобы открыть меню.");
         mp.keys.bind(69 /* key.E */, true, script.stopWork);
+    },
+    // TODO: Доделать
+    enterWorkCollectors: (location) => {
+        switch (location) {
+            case 'santos':
+                notifyBlack('хотите продолжить работу?');
+                mp.keys.bind(69 /* key.E */, true, script.enterWorkSantos);
+                break;
+            case 'sandy':
+                notifyBlack('хотите продолжить работу?');
+                break;
+            case 'paleto':
+                notifyBlack('хотите продолжить работу?');
+                break;
+        }
+    },
+    cantWorkThisLevelCollectors: () => {
+        // alert('Вы не можете продолжить работу на данном уровне!')
+    }
+});
+
+const jobVehicle = {};
+mp.events.add({
+    setMarkerOnJobVehicle: (position) => {
+        const { x, y, z } = position;
+        jobVehicle.vehicleIsActive = true;
+        jobVehicle.coordsVehicle = new mp.Vector3(x, y, z);
+        // I do not know how this will affect the performance of the client part of the user
+        mp.events.add('render', () => {
+            if (jobVehicle.vehicleIsActive === true) {
+                mp.game.graphics.drawMarker(39, x, y, z + 3.25, 0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 0, 178, 255, 198, true, false, 2, false, null, null, false);
+            }
+            else
+                return;
+        });
+    },
+    unsetMarkerOnJobVehicle: () => {
+        jobVehicle.vehicleIsActive = false;
+    }
+});
+
+const createNewFamily = () => {
+    mp.events.callRemote('createNewFamily', 'test123', 5000);
+    setTimeout(() => {
+        mp.keys.unbind(69 /* key.E */, true, createNewFamily);
+    }, 150);
+};
+mp.events.add({
+    bindFamilyShape: () => {
+        notifyBlack('чтобы открыть меню покупки.');
+        mp.keys.bind(69 /* key.E */, true, createNewFamily);
     }
 });

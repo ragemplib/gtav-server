@@ -13,16 +13,7 @@ class Auth {
         // soon...
       },
 
-      registerNewCharacterWithUser: async (
-        player: PlayerMp,
-        email: string,
-        login: string,
-        password: string,
-        firstName: string,
-        lastName: string,
-        age: string,
-        gender: string
-      ) => {
+      registerNewCharacterWithUser: async (player: PlayerMp, email: string, login: string, password: string, firstName: string, lastName: string, age: string, gender: string) => {
         try {
           const findUser = await UserModel.findOne({
             rgsc: player.rgscId,
@@ -89,6 +80,7 @@ class Auth {
         player.position = new mp.Vector3(x, y, z);
         player.dbId = users.character._id.toString();
         player.uid = users.character.uid;
+        player.fullName = users.character.fullName;
         player.loggedIn = true;
         player.model = mp.joaat(users.character.gender === "female" ? "mp_f_freemode_01" : "mp_m_freemode_01");
         player.dimension = users.character.dimension;
@@ -96,6 +88,7 @@ class Auth {
         player.adminLvl = users.character.adminLvl;
         player.isOnWork = users.character.isWorkOnJob;
         player.isJob = users.character.isJob;
+        users.character.loggedIn = player.loggedIn;
       });
   }
 
@@ -107,8 +100,10 @@ class Auth {
       armour: player.armour,
       health: player.health,
       uid: player.uid,
+      loggedIn: player.loggedIn,
     };
 
+    // Bug: Если приостановить работу сервера, и затем выйти из игры (alt+f4), то состояние loggedIn не сохраниться, и останется в :"true".
     const findUser = await UserModel.findOneAndUpdate(
       { serial: data.serial },
       { $set: { loggedIn: false } }
@@ -122,6 +117,7 @@ class Auth {
           dimension: data.dimension,
           armour: data.armour,
           health: data.health,
+          loggedIn: data.loggedIn
         },
       }
     );
@@ -130,6 +126,7 @@ class Auth {
     findCharacter!.save();
   }
 
+  // using for playerJoin, so $set: {loggedIn: true}
   public async findUserWithSerial(player: PlayerMp) {
     const findUser = await UserModel.findOneAndUpdate(
       { serial: player.serial },

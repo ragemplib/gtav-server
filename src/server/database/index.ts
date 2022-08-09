@@ -1,6 +1,8 @@
 import { consoleColor } from '@/../shared/contansts';
 import mongoose from 'mongoose';
 
+// TODO: Создание логов для каждого персонажа отдельно (возможно в отдельной бд)
+
 export default class MongooseConnection {
 	private url: string;
 

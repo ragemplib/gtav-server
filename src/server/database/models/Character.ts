@@ -87,7 +87,12 @@ const characterSchema = new Schema<Character>({
     type: String,
     default: 'none',
     required: false,
-  }
+  },
+
+  loggedIn: {
+    type: Boolean,
+    required: false,
+  },
 });
 
 characterSchema.pre("save", function (next) {

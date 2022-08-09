@@ -31,4 +31,16 @@ mp.events.addCommand({
   changeUrl: async (player: PlayerMp, url: string) => {
     player.call("changeUrlToClient", [url]);
   },
+
+  veh: (player: PlayerMp, _: any, target: number, vehicleName: string | number) => {
+    if (target === undefined || null) return player.outputChatBox('/veh id vehicleName');
+    const players = mp.players.at(target);
+    if (players === null) return player.outputChatBox('[Error]: Players is null.');
+    const {x, y, z} = players.position;
+    mp.vehicles.new((vehicleName), new mp.Vector3(x + 2, y, z), { numberPlate: 'dev' });
+  },
+
+  cl: (player: PlayerMp, _: any, id: number, draw: number, texture: number, pallete: number) => {
+    player.setClothes(id, draw, texture, pallete);
+  }
 });

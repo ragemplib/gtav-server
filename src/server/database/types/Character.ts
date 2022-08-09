@@ -14,6 +14,7 @@ export type Character = {
     money: Money,
     isWorkOnJob: boolean,
     isJob: string,
+    loggedIn: boolean,
 };
 
 type Money = {
