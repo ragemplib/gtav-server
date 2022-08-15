@@ -1,9 +1,11 @@
-@import './assets/fonts/fonts.scss';
-@import './assets/scss/auth/auth.scss';
-@import './assets/scss/character/character.scss';
-@import './assets/scss/menu/menu.scss';
-@import './assets/scss/hud/hud.scss';
-@import './assets/scss/tablet/tablet.scss';
+@import '../fonts/fonts.scss';
+@import './auth/auth.scss';
+@import './character/character.scss';
+@import './menu/menu.scss';
+@import './hud/hud.scss';
+@import './tablet/tablet.scss';
+@import './modules/index.scss';
+@import './job/index.scss';
 
 *, *::after, *::before {
     margin: 0;

@@ -169,8 +169,6 @@ mp.events.add({
     playerReady: () => {
         mp.events.callRemote("hudGetDataToRPC"); // Получаю данные из БД (player.uid, player.admin)
     },
-    render: () => {
-    },
 });
 
 let createAccountCef = null;
@@ -266,12 +264,19 @@ const enterWorkSantos = () => {
         mp.keys.unbind(69 /* key.E */, true, enterWorkSantos);
     }, 150);
 };
+const playerLastShapeRoute = () => {
+    mp.events.callRemote('playerFollowsTheBank');
+    setTimeout(() => {
+        mp.keys.unbind(69 /* key.E */, true, playerLastShapeRoute);
+    }, 150);
+};
 var script = {
     stopWork,
     startWorkSantos,
     startWorkSandy,
     startWorkPaleto,
     enterWorkSantos,
+    playerLastShapeRoute,
 };
 
 mp.events.add({
@@ -310,9 +315,13 @@ mp.events.add({
                 break;
         }
     },
-    cantWorkThisLevelCollectors: () => {
+    cantWorkThisLocationCollectors: () => {
         // alert('Вы не можете продолжить работу на данном уровне!')
-    }
+    },
+    playerOnLastShapeRouteCollectors: () => {
+        notifyBlack('чтобы сдать деньги в банк.');
+        mp.keys.bind(69 /* key.E */, true, script.playerLastShapeRoute);
+    },
 });
 
 const jobVehicle = {};

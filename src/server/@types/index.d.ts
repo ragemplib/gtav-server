@@ -26,6 +26,7 @@ declare global {
     pointIndex: number;
     routeIndex: number;
     routeLocation: 'Santos' | 'Sandy' | 'Paleto' | 'None';
+    leader: number; // for lobby
   }
 }
 

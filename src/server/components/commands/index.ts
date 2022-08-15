@@ -42,5 +42,13 @@ mp.events.addCommand({
 
   cl: (player: PlayerMp, _: any, id: number, draw: number, texture: number, pallete: number) => {
     player.setClothes(id, draw, texture, pallete);
-  }
+  },
+
+	tpveh: (player, _: any, target: any): void => {
+		let vehID = mp.vehicles.at(target);
+		let playerID = mp.players.at(target);
+		if (target === undefined || vehID === undefined || playerID === undefined) return player.outputChatBox("!{#acffa6}[INFORMATION] !{white}/tpveh <id-player> <id-vehicle>");
+		vehID.position = new mp.Vector3(playerID.position.x + 2, playerID.position.y, playerID.position.z);
+		player.outputChatBox(`Vehicle: [${vehID.id}] teleported to you.`);
+	},
 });

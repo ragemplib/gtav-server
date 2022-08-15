@@ -1,13 +1,14 @@
-import './scripts/peds';
-import notifyBlack from "./scripts/startNotify"
-import script from "./scripts/work"
+import "./scripts/peds";
+import "./scripts/rpc";
+import notifyBlack from "./scripts/startNotify";
+import script from "./scripts/work";
 
 mp.events.add({
   startWorkCollectors: (location: string) => {
     switch (location) {
       case "santos":
         notifyBlack("чтобы поговорить с работодателем.");
-        mp.keys.bind(key.E, true, script.startWorkSantos);
+        mp.keys.bind(key.E, true, script.showCollectorMenu);
         break;
 
       case "sandy":
@@ -33,26 +34,32 @@ mp.events.add({
   // TODO: Доделать
   enterWorkCollectors: (location: string) => {
     switch (location) {
-      case 'santos':
-        notifyBlack('хотите продолжить работу?');
+      case "santos":
+        notifyBlack("хотите продолжить работу?");
         mp.keys.bind(key.E, true, script.enterWorkSantos);
         break;
 
-      case 'sandy':
-        notifyBlack('хотите продолжить работу?');
+      case "sandy":
+        notifyBlack("хотите продолжить работу?");
 
         break;
 
-      case 'paleto':
-        notifyBlack('хотите продолжить работу?');
+      case "paleto":
+        notifyBlack("хотите продолжить работу?");
 
         break;
 
-      default: break;
+      default:
+        break;
     }
   },
 
-  cantWorkThisLevelCollectors: () => {
+  cantWorkThisLocationCollectors: () => {
     // alert('Вы не можете продолжить работу на данном уровне!')
-  }
+  },
+
+  playerOnLastShapeRouteCollectors: () => {
+    notifyBlack("чтобы сдать деньги в банк.");
+    mp.keys.bind(key.E, true, script.playerLastShapeRoute);
+  },
 });

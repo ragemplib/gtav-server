@@ -1753,7 +1753,6 @@ class Auth {
             armour: player.armour,
             health: player.health,
             uid: player.uid,
-            loggedIn: player.loggedIn,
         };
         // Bug: Если приостановить работу сервера, и затем выйти из игры (alt+f4), то состояние loggedIn не сохраниться, и останется в :"true".
         const findUser = await UserModel.findOneAndUpdate({ serial: data.serial }, { $set: { loggedIn: false } });
@@ -1763,7 +1762,7 @@ class Auth {
                 dimension: data.dimension,
                 armour: data.armour,
                 health: data.health,
-                loggedIn: data.loggedIn
+                loggedIn: false
             },
         });
         findUser.save();
@@ -1816,7 +1815,15 @@ mp.events.addCommand({
     },
     cl: (player, _, id, draw, texture, pallete) => {
         player.setClothes(id, draw, texture, pallete);
-    }
+    },
+    tpveh: (player, _, target) => {
+        let vehID = mp.vehicles.at(target);
+        let playerID = mp.players.at(target);
+        if (target === undefined || vehID === undefined || playerID === undefined)
+            return player.outputChatBox("!{#acffa6}[INFORMATION] !{white}/tpveh <id-player> <id-vehicle>");
+        vehID.position = new mp.Vector3(playerID.position.x + 2, playerID.position.y, playerID.position.z);
+        player.outputChatBox(`Vehicle: [${vehID.id}] teleported to you.`);
+    },
 });
 
 mp.events.add("getInfoUserData", async (player) => {
@@ -1829,6 +1836,22 @@ mp.events.add("getInfoUserData", async (player) => {
 mp.events.add('hudGetDataToRPC', (player) => {
     player.call('hudDataWithRPC', [player.uid, player.admin]);
 });
+
+class JobAPI {
+    collector = {};
+    setParametrJobCollector(bankLevel, routeLocation, routeIndex, pointIndex, leaderId) {
+        this.collector.bankLevel = bankLevel;
+        this.collector.routeLocation = routeLocation;
+        this.collector.routeIndex = routeIndex;
+        this.collector.pointIndex = pointIndex;
+        this.collector.leader = leaderId;
+    }
+    getPlayerToWork(player, status, name) {
+        player.isOnWork = status;
+        player.isJob = name;
+    }
+}
+const jobApi = new JobAPI();
 
 class WorkersUser {
     // TODO: Сделать кастомные уведомления!
@@ -1917,17 +1940,18 @@ var config = {
 
 class Collectors {
     routes;
-    vehicle;
-    collector = {};
-    shapeRoute;
-    checkpointRoute;
-    blipRoute;
+    vehicle; // Машина для спавна
+    collector = {}; // Для действий с поинтами, роутами
+    shapeRoute; // Основной шейп для маршрута
+    lastShapeRoute; // Последний шейп для маршрута
+    checkpointRoute; // Основной чекпоинт для маршрута
+    blipRoute; // Основной блип для маршрута
     constructor({ routes }) {
         this.routes = routes;
         config.bankBlips.map((position) => {
             const { x, y, z } = position;
             mp.blips.new(408, new mp.Vector3(x, y, z), {
-                name: 'Работа инкассатора [dev]',
+                name: "Работа инкассатора [dev]",
                 scale: 0.7,
                 color: 43,
                 shortRange: true,
@@ -1945,6 +1969,9 @@ class Collectors {
         this.events();
         this.commands();
     }
+    /**
+     * Необходимые комманды для работы
+     */
     async commands() {
         mp.events.addCommand({
             fsc: (player) => (player.position = new mp.Vector3(-37.6, -665.3, 33.48)),
@@ -1952,41 +1979,44 @@ class Collectors {
             thsc: (player) => (player.position = new mp.Vector3(-111.9, 6466.44, 31.63)),
         });
     }
+    /**
+     * Обработчик входа в шейпы
+     */
     // TODO: Создать меню с выбором: начать работу, продолжить, уволиться, взять транспорт в аренду
     playerEnterColshape(player, colshape) {
         try {
             switch (colshape) {
                 case config.startColshapeFromSantos:
                     if (player.isOnWork === false) {
-                        player.call('startWorkCollectors', ['santos']);
+                        player.call("startWorkCollectors", ["santos"]);
                     }
                     else {
-                        if (player.isOnWork === true && player.isJob !== 'Collectors') {
-                            player.call('cantWorkThisLevelCollectors');
+                        if (player.isOnWork === true && player.isJob !== "Collectors") {
+                            player.call("cantWorkThisLocationCollectors");
                         }
-                        if (player.isOnWork === true && player.isJob === 'Collectors') {
-                            player.call('enterWorkCollectors', ['santos']);
+                        if (player.isOnWork === true && player.isJob === "Collectors") {
+                            player.call("enterWorkCollectors", ["santos"]);
                         }
                         // player.call('stopWorkCollectors');
                     }
                     break;
                 case config.startColshapeFromSandy:
                     if (player.isOnWork === false) {
-                        player.call('startWorkCollectors', ['sandy']);
+                        player.call("startWorkCollectors", ["sandy"]);
                     }
                     else {
-                        if (player.isOnWork === true && player.isJob === 'Collectors') {
-                            player.call('enterWorkCollectors', ['sandy']);
+                        if (player.isOnWork === true && player.isJob === "Collectors") {
+                            player.call("enterWorkCollectors", ["sandy"]);
                         }
                     }
                     break;
                 case config.startColshapeFromPaleto:
                     if (player.isOnWork === false) {
-                        player.call('startWorkCollectors', ['paleto']);
+                        player.call("startWorkCollectors", ["paleto"]);
                     }
                     else {
-                        if (player.isOnWork === true && player.isJob === 'Collectors') {
-                            player.call('enterWorkCollectors', ['paleto']);
+                        if (player.isOnWork === true && player.isJob === "Collectors") {
+                            player.call("enterWorkCollectors", ["paleto"]);
                         }
                     }
                     break;
@@ -1994,6 +2024,14 @@ class Collectors {
                     this.collector.pointIndex++;
                     this.deleteJobPoint();
                     this.createNextPoint(player);
+                    break;
+                case this.lastShapeRoute:
+                    if (player.vehicle) {
+                        if (player.vehicle.id === this.vehicle.id) {
+                            player.call("playerOnLastShapeRouteCollectors");
+                            console.log('true last shape route');
+                        }
+                    }
                     break;
                 default:
                     break;
@@ -2003,6 +2041,9 @@ class Collectors {
             console.error(e);
         }
     }
+    /**
+     * Обработчик выхода из шейпов
+     */
     playerExitColshape(player, colshape) {
         switch (colshape) {
             case config.startColshapeFromSantos:
@@ -2013,47 +2054,42 @@ class Collectors {
                 break;
             case this.shapeRoute:
                 break;
+            case this.lastShapeRoute:
+                break;
         }
     }
+    /**
+     * Устройство на работу
+     */
     async playerStartWork(player, location) {
         try {
             switch (location) {
-                case 'santos':
-                    player.isOnWork = true;
-                    player.isJob = 'Collectors';
-                    this.collector.bankLevel = 3;
-                    this.collector.routeLocation = 'Santos';
-                    this.collector.routeIndex = 0; // TODO: Create a function for randomizing routes
-                    this.collector.pointIndex = 0;
+                case "santos":
+                    jobApi.getPlayerToWork(player, true, 'Collectors');
+                    jobApi.setParametrJobCollector(3, 'Santos', 0, 0, player.uid);
                     this.createNextPoint(player);
                     this.playerClothes(player);
                     this.spawnVehicle(player);
                     workersUser.playerJobSave(player);
                     this.getUserJobInfo(player, this.collector);
                     break;
-                case 'sandy':
-                    player.isOnWork = true;
-                    player.isJob = 'Collectors';
-                    this.collector.bankLevel = 1;
-                    this.collector.routeLocation = 'Sandy';
-                    this.collector.routeIndex = 0; // TODO: Create a function for randomizing routes
-                    this.collector.pointIndex = 0;
+                case "sandy":
+                    jobApi.getPlayerToWork(player, true, 'Collectors');
+                    jobApi.setParametrJobCollector(1, 'Sandy', 0, 0, player.uid);
                     this.createNextPoint(player);
-                    this.getUserJobInfo(player, this.collector);
                     this.playerClothes(player);
+                    this.spawnVehicle(player);
                     workersUser.playerJobSave(player);
+                    this.getUserJobInfo(player, this.collector);
                     break;
-                case 'paleto':
-                    player.isOnWork = true;
-                    player.isJob = 'Collectors';
-                    this.collector.bankLevel = 1;
-                    this.collector.routeLocation = 'Paleto';
-                    this.collector.routeIndex = 0; // TODO: Create a function for randomizing routes
-                    this.collector.pointIndex = 0;
+                case "paleto":
+                    jobApi.getPlayerToWork(player, true, 'Collectors');
+                    jobApi.setParametrJobCollector(2, 'Paleto', 0, 0, player.uid);
                     this.createNextPoint(player);
-                    this.getUserJobInfo(player, this.collector);
                     this.playerClothes(player);
+                    this.spawnVehicle(player);
                     workersUser.playerJobSave(player);
+                    this.getUserJobInfo(player, this.collector);
                     break;
             }
         }
@@ -2061,33 +2097,27 @@ class Collectors {
             console.error(e);
         }
     }
+    /**
+     * Продолжение работы
+     */
     async playerEnterWork(player, location) {
         try {
             switch (location) {
-                case 'santos':
-                    this.collector.bankLevel = 3;
-                    this.collector.routeLocation = 'Santos';
-                    this.collector.routeIndex = 0; // TODO: Create a function for randomizing routes
-                    this.collector.pointIndex = 0;
+                case "santos":
+                    jobApi.setParametrJobCollector(3, 'Santos', 0, 0, player.uid);
                     this.createNextPoint(player);
                     this.spawnVehicle(player);
                     this.playerClothes(player);
                     this.getUserJobInfo(player, this.collector);
                     break;
-                case 'sandy':
-                    this.collector.bankLevel = 1;
-                    this.collector.routeLocation = 'Sandy';
-                    this.collector.routeIndex = 0; // TODO: Create a function for randomizing routes
-                    this.collector.pointIndex = 0;
+                case "sandy":
+                    jobApi.setParametrJobCollector(1, 'Sandy', 0, 0, player.uid);
                     this.createNextPoint(player);
                     this.getUserJobInfo(player, this.collector);
                     this.playerClothes(player);
                     break;
-                case 'paleto':
-                    this.collector.bankLevel = 1;
-                    this.collector.routeLocation = 'Paleto';
-                    this.collector.routeIndex = 0; // TODO: Create a function for randomizing routes
-                    this.collector.pointIndex = 0;
+                case "paleto":
+                    jobApi.setParametrJobCollector(2, 'Paleto', 0, 0, player.uid);
                     this.createNextPoint(player);
                     this.getUserJobInfo(player, this.collector);
                     this.playerClothes(player);
@@ -2098,43 +2128,59 @@ class Collectors {
             console.error(e);
         }
     }
+    /**
+     * Увольнение (в данный момент не работает через шейп, в будущем будет через ui)
+     */
     async playerStopWork(player) {
         try {
             player.isOnWork = false;
-            player.isJob = 'none';
+            player.isJob = "none";
             this.collector.bankLevel = 0;
             this.collector.partyFriendList = [];
             this.collector.partyFriendValue = 0;
             this.collector.pointIndex = 0;
             this.collector.routeIndex = 0;
-            this.collector.routeLocation = 'None';
+            this.collector.routeLocation = "None";
             this.getUserJobInfo(player, this.collector);
         }
         catch (e) {
             console.error(e);
         }
     }
+    /**
+     * Создание последующего поинта
+     */
     createNextPoint(player) {
         try {
-            if (player.isOnWork === true && player.isJob === 'Collectors') {
-                if (this.collector.pointIndex < 7) {
-                    const waypointPosition = this.routes[this.collector.routeLocation][this.collector.routeIndex].coordinates[this.collector.pointIndex];
+            if (player.isOnWork === true && player.isJob === "Collectors") {
+                const lastArray = this.routes[this.collector.routeLocation][this.collector.routeIndex]
+                    .coordinates.length - 1;
+                if (this.collector.pointIndex <
+                    this.routes[this.collector.routeLocation][this.collector.routeIndex]
+                        .coordinates.length -
+                        1) {
+                    const waypointPosition = this.routes[this.collector.routeLocation][this.collector.routeIndex]
+                        .coordinates[this.collector.pointIndex];
                     console.log(waypointPosition);
                     const [{ x, y, z }] = waypointPosition;
                     this.shapeRoute = mp.colshapes.newSphere(x, y, z + 0.5, 1, 0);
-                    this.checkpointRoute = mp.checkpoints.new(1, new mp.Vector3(x, y, z), 1, { direction: new mp.Vector3(x, y, z), color: [0, 178, 255, 198], visible: true, dimension: 0 });
+                    this.checkpointRoute = mp.checkpoints.new(1, new mp.Vector3(x, y, z), 1, {
+                        direction: new mp.Vector3(x, y, z),
+                        color: [0, 178, 255, 198],
+                        visible: true,
+                        dimension: 0,
+                    });
                     this.blipRoute = mp.blips.new(618, new mp.Vector3(x, y, z), {
-                        name: 'Необходимый банкомат',
+                        name: "Необходимый банкомат",
                         dimension: 0,
                         color: 11,
                     });
                     this.checkpointRoute.showFor(player);
                     this.blipRoute.routeFor(player, 11, 1);
                 }
-                else {
-                    console.log('createNextPoint > 7');
-                    const waypointPositionLast = [...this.routes[this.collector.routeLocation][this.collector.routeIndex].coordinates[this.collector.pointIndex]].pop();
-                    console.log(waypointPositionLast);
+                if (this.collector.pointIndex === lastArray) {
+                    this.deleteJobPoint();
+                    this.playerOnLastPoint(player);
                 }
             }
         }
@@ -2142,6 +2188,30 @@ class Collectors {
             console.error(e);
         }
     }
+    /**
+     * Логика для последнего шейпа (когда все деньги уже собраны, и их остаётся только отвезти)
+     */
+    playerOnLastPoint(player) {
+        const lastWaypointPosition = this.routes[this.collector.routeLocation][this.collector.routeIndex].coordinates.pop();
+        const [{ x, y, z }] = lastWaypointPosition;
+        this.lastShapeRoute = mp.colshapes.newSphere(x, y, z + 0.5, 10, 0);
+        this.checkpointRoute = mp.checkpoints.new(4, new mp.Vector3(x, y, z), 10, {
+            direction: new mp.Vector3(x, y, z),
+            color: [40, 186, 22, 113],
+            visible: true,
+            dimension: 0,
+        });
+        this.blipRoute = mp.blips.new(500, new mp.Vector3(x, y, z), {
+            name: "Точка сдачи денег",
+            dimension: 0,
+            color: 15,
+        });
+        this.checkpointRoute.showFor(player);
+        this.blipRoute.routeFor(player, 11, 1);
+    }
+    /**
+     * Получение информации о устроившися пользователе
+     */
     getUserJobInfo(player, collectors) {
         const playerData = {
             isOnWork: player.isOnWork,
@@ -2154,17 +2224,23 @@ class Collectors {
         console.table(playerData);
         console.table(collectorData);
     }
+    /**
+     * Спавн авто при устройстве на работу
+     */
     spawnVehicle(player) {
         const vehicleSpawnPosition = config.vehicleSpawnCoords[Math.floor(Math.random() * config.vehicleSpawnCoords.length)];
         this.vehicle = mp.vehicles.new(1747439474 /* RageEnums.Hashes.Vehicle.STOCKADE */, new mp.Vector3(vehicleSpawnPosition));
         player.jobVehicle = this.vehicle.id;
-        player.call('setMarkerOnJobVehicle', [vehicleSpawnPosition]);
+        player.call("setMarkerOnJobVehicle", [vehicleSpawnPosition]);
     }
+    /**
+     * Одежда для игрока
+     */
     playerClothes(player) {
-        if (player.isOnWork === true && player.isJob === 'Collectors') {
+        if (player.isOnWork === true && player.isJob === "Collectors") {
             switch (player.model) {
                 // mp_f_freemode_01 : female
-                case 0x9C9EFFD8:
+                case 0x9c9effd8:
                     player.setClothes(3, 18, 1, 1); // tors
                     player.setClothes(8, 3, 1, 1); // undershirts
                     player.setClothes(11, 46, 1, 1); // tops
@@ -2172,7 +2248,7 @@ class Collectors {
                     player.setClothes(4, 37, 1, 1); // legs
                     break;
                 // mp_m_freemode_01 : male
-                case 0x705E61F2:
+                case 0x705e61f2:
                     player.setClothes(11, 50, 1, 1); // tops
                     player.setClothes(3, 17, 1, 1); // tors
                     player.setClothes(8, 2, 1, 1); // undershirts
@@ -2185,6 +2261,9 @@ class Collectors {
         else
             return;
     }
+    /**
+     * Респавн блипов, шейпов, чекпоинтов
+     */
     deleteJobPoint() {
         try {
             if (mp.blips.exists(this.blipRoute))
@@ -2198,20 +2277,41 @@ class Collectors {
             console.error(e);
         }
     }
+    /**
+     * Удаление всех рабочих блипов, шейпов, чекпоинтов на карте (связанных с данной работой)
+     */
+    deleteAllJobPoints() {
+        try {
+            if (mp.blips.exists(this.blipRoute))
+                this.blipRoute.destroy();
+            if (mp.colshapes.exists(this.shapeRoute))
+                this.shapeRoute.destroy();
+            if (mp.checkpoints.exists(this.checkpointRoute))
+                this.checkpointRoute.destroy();
+            if (mp.colshapes.exists(this.lastShapeRoute))
+                this.lastShapeRoute.destroy();
+        }
+        catch (e) {
+            console.error(e);
+        }
+    }
     async events() {
         mp.events.add({
             playerEnterColshape: this.playerEnterColshape.bind(this),
             playerExitColshape: this.playerExitColshape.bind(this),
+            /**
+             * Игрок начинает работать
+             */
             playerStartWorkOnCollectors: async (player, location) => {
                 try {
                     switch (location) {
-                        case 'santos':
+                        case "santos":
                             this.playerStartWork(player, location);
                             break;
-                        case 'sandy':
+                        case "sandy":
                             this.playerStartWork(player, location);
                             break;
-                        case 'paleto':
+                        case "paleto":
                             this.playerStartWork(player, location);
                             break;
                     }
@@ -2220,6 +2320,9 @@ class Collectors {
                     console.error(e);
                 }
             },
+            /**
+             * Игрок заканчивает работать
+             */
             playerStopWorkOnCollectors: async (player) => {
                 try {
                     this.playerStopWork(player);
@@ -2228,16 +2331,19 @@ class Collectors {
                     console.error(e);
                 }
             },
+            /**
+             * Игрок продолжает работать
+             */
             playerEnterWorkOnCollectors: async (player, location) => {
                 try {
                     switch (location) {
-                        case 'santos':
+                        case "santos":
                             this.playerEnterWork(player, location);
                             break;
-                        case 'sandy':
+                        case "sandy":
                             this.playerEnterWork(player, location);
                             break;
-                        case 'paleto':
+                        case "paleto":
                             this.playerEnterWork(player, location);
                             break;
                     }
@@ -2246,13 +2352,28 @@ class Collectors {
                     console.error(e);
                 }
             },
+            /**
+             * Требуется для того, чтобы убрать мигающий маркер (над авто)
+             */
             playerEnterVehicle: (player, vehicle, seat) => {
-                console.log(vehicle.id, seat);
                 if (vehicle.id === this.vehicle.id) {
-                    player.call('unsetMarkerOnJobVehicle');
-                    console.log('TRUE');
+                    player.call("unsetMarkerOnJobVehicle");
                 }
-            }
+            },
+            /**
+             * Отправить игрока в банк
+             */
+            playerFollowsTheBank: (player) => {
+                const data = {
+                    point: this.collector.pointIndex,
+                    route: this.collector.routeIndex,
+                };
+                this.collector.pointIndex = 0;
+                this.playerStopWork(player);
+                this.deleteAllJobPoints();
+                const money = data.point * 1000;
+                player.notify(`${money}`);
+            },
         });
     }
 }
@@ -2272,9 +2393,11 @@ class Jobs {
                             [new mp.Vector3(-48.29, -505.1, 40.46)],
                             [new mp.Vector3(-34.59, -463.0, 40.62)],
                             [new mp.Vector3(-12.14, -424.34, 39.52)],
-                            [new mp.Vector3(-11.94, -424.04, 39.51)],
                             [new mp.Vector3(18.12, -386.89, 39.38)],
                             [new mp.Vector3(119.55, -395.04, 41.26)],
+                            [new mp.Vector3(210.28, -360.74, 44.08)],
+                            [new mp.Vector3(264.92, -368.55, 44.88)],
+                            [new mp.Vector3(284.71, -341.80, 45.74)],
                         ],
                     },
                 },

@@ -100,7 +100,6 @@ class Auth {
       armour: player.armour,
       health: player.health,
       uid: player.uid,
-      loggedIn: player.loggedIn,
     };
 
     // Bug: Если приостановить работу сервера, и затем выйти из игры (alt+f4), то состояние loggedIn не сохраниться, и останется в :"true".
@@ -117,7 +116,7 @@ class Auth {
           dimension: data.dimension,
           armour: data.armour,
           health: data.health,
-          loggedIn: data.loggedIn
+          loggedIn: false
         },
       }
     );
