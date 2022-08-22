@@ -8,4 +8,8 @@ const port = 1337;
 
 // later...
 
+app.get('/', (req, res) => {
+    res.send('HELLO');
+});
+
 app.listen(port, () => console.log(`${consoleColor.Yellow}[Express]${consoleColor.Reset} Сервер запустился на http://localhost:${consoleColor.Green}${port}${consoleColor.Reset} url`));

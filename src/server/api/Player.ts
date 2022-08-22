@@ -18,6 +18,6 @@ export default class PlayerApi {
   public async playerIsAdmin(player: PlayerMp) {
     const user = await CharacterModel.findOne({ uid: player.uid });
     if (!user) return console.log('Пользователь не найден!');
-    return user?.admin;
+    return console.log(user?.admin);
   }
 }

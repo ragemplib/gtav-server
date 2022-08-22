@@ -88,7 +88,7 @@ class Auth {
         player.adminLvl = users.character.adminLvl;
         player.isOnWork = users.character.isWorkOnJob;
         player.isJob = users.character.isJob;
-        users.character.loggedIn = player.loggedIn;
+        users.character.loggedIn = true;
       });
   }
 

@@ -63,16 +63,11 @@ export default class Collectors {
       switch (colshape) {
         case config.startColshapeFromSantos:
           if (player.isOnWork === false) {
-            player.call("startWorkCollectors", ["santos"]);
+            player.call("callClientOpenMenuCollectors", ["santos", player.isOnWork]);
           } else {
-            if (player.isOnWork === true && player.isJob !== "Collectors") {
-              player.call("cantWorkThisLocationCollectors");
-            }
-
-            if (player.isOnWork === true && player.isJob === "Collectors") {
-              player.call("enterWorkCollectors", ["santos"]);
-            }
-            // player.call('stopWorkCollectors');
+            player.call('callClientOpenMenuCollectors', ['santos', player.isOnWork]);
+            
+            if (player.isOnWork === true && player.isJob !== "Collectors") return player.outputChatBox('Вы уже работаете на другой работе. Для начала увольтесь с текущей!');
           }
           break;
 

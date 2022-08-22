@@ -1,4 +1,4 @@
-export default function notifyBlack (message: string) {
+export function notifyBlack (message: string) {
     if (mp.players.local.vehicle) return;
     if (mp.players.local.isTypingInTextChat) return;
     if (mp.game.ui.isPauseMenuActive()) return;

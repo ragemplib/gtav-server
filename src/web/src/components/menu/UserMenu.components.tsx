@@ -17,9 +17,9 @@ const Settings = () => {
 
     const [active, setActive] = useState(0);
 
-    // rpc.register('CefSettings', (clientData: Props) => {
-    //     setData({ ...data, login: clientData.login, avatarUrl: clientData.avatarUrl });
-    // });
+    rpc.register('CefSettings', (clientData: Props) => {
+        setData({ ...data, login: clientData.login, avatarUrl: clientData.avatarUrl });
+    });
 
     return (
         <div className="all_settings">

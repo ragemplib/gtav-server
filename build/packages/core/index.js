@@ -1742,7 +1742,7 @@ class Auth {
             player.adminLvl = users.character.adminLvl;
             player.isOnWork = users.character.isWorkOnJob;
             player.isJob = users.character.isJob;
-            users.character.loggedIn = player.loggedIn;
+            users.character.loggedIn = true;
         });
     }
     async playerIsQuit(player) {
@@ -1988,16 +1988,12 @@ class Collectors {
             switch (colshape) {
                 case config.startColshapeFromSantos:
                     if (player.isOnWork === false) {
-                        player.call("startWorkCollectors", ["santos"]);
+                        player.call("callClientOpenMenuCollectors", ["santos", player.isOnWork]);
                     }
                     else {
-                        if (player.isOnWork === true && player.isJob !== "Collectors") {
-                            player.call("cantWorkThisLocationCollectors");
-                        }
-                        if (player.isOnWork === true && player.isJob === "Collectors") {
-                            player.call("enterWorkCollectors", ["santos"]);
-                        }
-                        // player.call('stopWorkCollectors');
+                        player.call('callClientOpenMenuCollectors', ['santos', player.isOnWork]);
+                        if (player.isOnWork === true && player.isJob !== "Collectors")
+                            return player.outputChatBox('Вы уже работаете на другой работе. Для начала увольтесь с текущей!');
                     }
                     break;
                 case config.startColshapeFromSandy:
@@ -2516,6 +2512,9 @@ const app = express__default["default"]();
 app.use(bodyParser__default["default"].json());
 const port = 1337;
 // later...
+app.get('/', (req, res) => {
+    res.send('HELLO');
+});
 app.listen(port, () => console.log(`${consoleColor.Yellow}[Express]${consoleColor.Reset} Сервер запустился на http://localhost:${consoleColor.Green}${port}${consoleColor.Reset} url`));
 
 mp.events.add({

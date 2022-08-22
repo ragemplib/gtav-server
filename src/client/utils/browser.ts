@@ -2,6 +2,7 @@ import rpc from "rage-rpc";
 
 class Browser {
   private hud: BrowserMp | null = null;
+  private anyMenu: BrowserMp | null = null;
 
   constructor() {
     this.anyEvents();

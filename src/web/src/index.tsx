@@ -9,9 +9,9 @@ import Chat from './components/chat/Chat.components';
 import Hud from './components/hud/Hud.components';
 import Settings from './components/menu/UserMenu.components';
 import Tablet from './components/tablet/Tablet';
+import Collector from './components/job/Collector';
 
 import './assets/scss/index.scss';
-import Collector from './components/job/Collector';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
